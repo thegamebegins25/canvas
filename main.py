@@ -22,9 +22,9 @@ client = discord.Client()
 @client.event
 async def on_ready():
     while True:
-        response = requests.get('https://charlottelatin.instructure.com/api/v1/announcements?context_codes[]=course_281', headers=headers)
+        response = requests.get('https://charlottelatin.instructure.com/api/v1/announcements?context_codes[]=course_281&context_codes[]=course_313', headers=headers)
         data = response.json()
-
+        #print(data)
         for i in data:
             id = i["id"]
 
@@ -35,19 +35,27 @@ async def on_ready():
                 file.close()
 
                 title = i['title']
-                name = i['user_name']
+                name = i['author']['display_name']
+                author_url = i['author']['html_url']
                 posted = i['posted_at']
+                url = i['url']
 
                 posted = datetime.datetime.strptime(posted, '%Y-%m-%dT%H:%M:%SZ')
-                flt = math.trunc(datetime.datetime.timestamp(posted))
-                posted = "<t:" + str(flt) + ">"
+                delta = datetime.timedelta(hours=4)
+                posted = posted - delta
+                postedstr = posted.strftime("%I:%M %p")
+                if postedstr[0] == "0":
+                    postedstr = postedstr[1:]
+
                 
                 message = html.unescape(i['message'])
                 message = markdownify.markdownify(message)
 
-                message = "<@&1008888570536280116>\nNEW CANVAS ANNOUNCEMENT!\nby: " + name + "\nPosted at: " + posted + "\n-------------------------------\n" + title + "\n-------------------------------\n" + message
-
-                msg = await client.get_channel(1008868944733544468).send(message)
+                embed = discord.Embed(title=title, timestamp=posted, url=url, description=message)
+                embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/998642902920069210/1009143571653328967/2019_CanvasLogoStacked_Color.png")
+                embed.set_author(name=name, url=author_url)
+                embed.set_footer(text=postedstr)
+                msg = await client.get_channel(1008868944733544468).send(content="<@&1008888570536280116>", embed=embed)
                 await msg.publish()
                 print("SENT NEW MESSAGE")
 
@@ -58,4 +66,4 @@ async def on_ready():
         await asyncio.sleep(60)
 
 
-client.run("MTAwODg2OTUyNjY5MzIyNDUxOA.G_VRQA.BhEZUkx_hBUAngEZl8DDvUvVV0D1bOi-ZVaEiI")
+client.run(os.getenv("CANVAS_DISCORD_TOKEN"))
